@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 
-const { v4: uuidv4, validate } = require('uuid');
+const { v4: uuidv4, validate, v4 } = require('uuid');
 
 const app = express();
 app.use(express.json());
@@ -10,19 +10,78 @@ app.use(cors());
 const users = [];
 
 function checksExistsUserAccount(request, response, next) {
-  // Complete aqui
+  const { username } = request.headers;
+
+  const user = users.find(user => user.username === username);
+
+  if (!user) {
+    return response.status(404).json({ error: "User not exists"});
+  }
+
+  request.user = user;
+
+  return next();
 }
 
 function checksCreateTodosUserAvailability(request, response, next) {
-  // Complete aqui
+  const { user } = request;
+
+  const planStatus = user.pro;
+
+  const totalTodos = user.todos.length;
+
+  if (planStatus === false && totalTodos > 9) {
+    return response.status(403).json({ error: "User is not in Pro Plan"})
+  }
+
+  else if (totalTodos >= 10 && planStatus === false) {
+    return response.status(403).json({ error: "User doesn't meet the requirements to create a new Todo (Not Pro and Have 10 ten Todos)"})
+  }
+  
+  request.user = user;
+  
+  return next();
 }
 
 function checksTodoExists(request, response, next) {
-  // Complete aqui
+  const { username } = request.headers;
+  const { id } = request.params;
+
+  if (validate(id) === false) {
+    return response.status(400).json({ error: "ID is not an UUID"});
+  }
+
+  const user = users.find(user => user.username === username);
+
+  if (!user) {
+    return response.status(404).json({ error: "User not exists"});
+  }
+
+  const todo = user.todos.find(todo => todo.id === id);
+
+  if (!todo) {
+    return response.status(404).json({ error: "Todo not exists"});
+  }
+  else {
+    request.user = user;
+    request.todo = todo;
+  
+    return next();
+  }
 }
 
 function findUserById(request, response, next) {
-  // Complete aqui
+  const { id } = request.params;
+
+  const user = users.find(user => user.id === id);
+
+  if (!user){
+    return response.status(404).json({ error: "User not exists"});
+  }
+  
+  request.user = user;
+
+  return next();
 }
 
 app.post('/users', (request, response) => {
